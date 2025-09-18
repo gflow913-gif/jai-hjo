@@ -45,6 +45,9 @@ export async function setupGoogleAuth(app: Express) {
     ? `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`
     : `http://localhost:${process.env.PORT || 5000}`;
     
+  console.log(`Setting up Google OAuth with callback URL: ${baseUrl}/api/auth/google/callback`);
+  console.log(`Google Client ID configured: ${process.env.GOOGLE_CLIENT_ID?.substring(0, 10)}...`);
+  
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,

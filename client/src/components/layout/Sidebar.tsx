@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 interface SidebarProps {
   user: any;
   balance: any;
+  activeSection: string;
+  onSectionChange: (section: string) => void;
   onRefresh: () => void;
 }
 
-export default function Sidebar({ user, balance, onRefresh }: SidebarProps) {
+export default function Sidebar({ user, balance, activeSection, onSectionChange, onRefresh }: SidebarProps) {
   const totalBalance = parseFloat(balance?.totalBalance || '0');
   const earnedBalance = parseFloat(balance?.earnedBalance || '0');
   const bonusBalance = parseFloat(balance?.bonusBalance || '0');
@@ -60,19 +62,51 @@ export default function Sidebar({ user, balance, onRefresh }: SidebarProps) {
         
         {/* Navigation Menu */}
         <nav className="space-y-2">
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-primary text-primary-foreground font-medium" data-testid="nav-dashboard">
+          <button 
+            onClick={() => onSectionChange('dashboard')}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${
+              activeSection === 'dashboard' 
+                ? 'bg-primary text-primary-foreground' 
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+            }`} 
+            data-testid="nav-dashboard"
+          >
             <i className="fas fa-home"></i>
             Dashboard
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors" data-testid="nav-games">
+          <button 
+            onClick={() => onSectionChange('games')}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${
+              activeSection === 'games' 
+                ? 'bg-primary text-primary-foreground' 
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+            }`} 
+            data-testid="nav-games"
+          >
             <i className="fas fa-gamepad"></i>
             Games
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors" data-testid="nav-history">
+          <button 
+            onClick={() => onSectionChange('history')}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${
+              activeSection === 'history' 
+                ? 'bg-primary text-primary-foreground' 
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+            }`} 
+            data-testid="nav-history"
+          >
             <i className="fas fa-history"></i>
             History
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors" data-testid="nav-withdraw">
+          <button 
+            onClick={() => onSectionChange('withdraw')}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${
+              activeSection === 'withdraw' 
+                ? 'bg-primary text-primary-foreground' 
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+            }`} 
+            data-testid="nav-withdraw"
+          >
             <i className="fas fa-money-bill-wave"></i>
             Withdraw
           </button>

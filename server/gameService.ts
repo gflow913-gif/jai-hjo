@@ -12,7 +12,7 @@ class GameService {
   private generateSecureRandom(max: number): number {
     const randomBuffer = randomBytes(4);
     const randomValue = randomBuffer.readUInt32BE(0);
-    return Math.floor((randomValue / 0xFFFFFFFF) * max);
+    return Math.floor((randomValue / 0x100000000) * max);
   }
 
   private async processGameResult(
@@ -29,53 +29,43 @@ class GameService {
 
     const currentTotal = parseFloat(balance.totalBalance);
     const currentEarned = parseFloat(balance.earnedBalance);
+    const currentBonus = parseFloat(balance.bonusBalance);
     
     // Check if user has enough balance
     if (currentTotal < betAmount) {
       throw new Error("Insufficient balance");
     }
 
-    // Calculate new balances
-    const netGain = winnings - betAmount;
-    const newTotal = currentTotal + netGain;
-    const newEarned = winnings > 0 ? currentEarned + winnings : currentEarned;
+    // Deduct bet from bonus first, then earned (maintains totalBalance = earnedBalance + bonusBalance)
+    let deductFromBonus = Math.min(betAmount, currentBonus);
+    let deductFromEarned = betAmount - deductFromBonus;
+    
+    const newBonus = currentBonus - deductFromBonus;
+    const newEarned = currentEarned - deductFromEarned + (winnings > 0 ? winnings : 0);
+    const newTotal = newEarned + newBonus;
 
-    // Update balance
+    // Update balance maintaining invariant: totalBalance = earnedBalance + bonusBalance
     await storage.updateUserBalance(userId, {
       totalBalance: newTotal.toFixed(2),
       earnedBalance: newEarned.toFixed(2),
+      bonusBalance: newBonus.toFixed(2),
     });
 
-    // Record bet transaction
+    // Record single transaction with complete bet outcome
     await storage.createTransaction({
       userId,
-      type: 'bet',
+      type: winnings > 0 ? 'win' : 'loss',
       gameType,
-      amount: (-betAmount).toString(),
-      balanceAfter: (currentTotal - betAmount).toFixed(2),
-      gameData,
+      amount: (winnings - betAmount).toFixed(2), // Net result: negative for loss, positive for win
+      balanceAfter: newTotal.toFixed(2),
+      gameData: {
+        ...gameData,
+        betAmount: betAmount,
+        winAmount: winnings,
+        deductedFromBonus: deductFromBonus,
+        deductedFromEarned: deductFromEarned
+      },
     });
-
-    // Record win transaction if applicable
-    if (winnings > 0) {
-      await storage.createTransaction({
-        userId,
-        type: 'win',
-        gameType,
-        amount: winnings.toString(),
-        balanceAfter: newTotal.toFixed(2),
-        gameData,
-      });
-    } else {
-      await storage.createTransaction({
-        userId,
-        type: 'loss',
-        gameType,
-        amount: '0',
-        balanceAfter: newTotal.toFixed(2),
-        gameData,
-      });
-    }
 
     return {
       won: winnings > 0,

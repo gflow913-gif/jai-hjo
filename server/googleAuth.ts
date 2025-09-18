@@ -45,11 +45,7 @@ export async function setupGoogleAuth(app: Express) {
     callbackURL: "/api/auth/google/callback"
   }, async (accessToken, refreshToken, profile, done) => {
     try {
-      console.log("Google OAuth callback - Profile received:", {
-        id: profile.id,
-        email: profile.emails?.[0]?.value,
-        name: profile.displayName
-      });
+      console.log("Google OAuth callback - User authenticated", { userId: profile.id });
 
       // Map Google profile to our user structure (don't set id, let DB generate)
       const userData = {
@@ -61,9 +57,8 @@ export async function setupGoogleAuth(app: Express) {
         googleId: profile.id,
       };
 
-      console.log("Creating/updating user with data:", userData);
       const user = await storage.upsertUser(userData);
-      console.log("User created/updated:", user);
+      console.log("User authentication successful", { userId: user.id });
       
       // Create session user object
       const sessionUser = {
@@ -74,7 +69,6 @@ export async function setupGoogleAuth(app: Express) {
         profileImageUrl: user.profileImageUrl,
       };
 
-      console.log("Returning session user:", sessionUser);
       return done(null, sessionUser);
     } catch (error) {
       console.error("Google auth error:", error);
@@ -83,15 +77,12 @@ export async function setupGoogleAuth(app: Express) {
   }));
 
   passport.serializeUser((user: any, done) => {
-    console.log("Serializing user:", user);
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: string, done) => {
     try {
-      console.log("Deserializing user with id:", id);
       const user = await storage.getUser(id);
-      console.log("Found user from DB:", user);
       if (user) {
         const sessionUser = {
           id: user.id,
@@ -100,10 +91,9 @@ export async function setupGoogleAuth(app: Express) {
           lastName: user.lastName,
           profileImageUrl: user.profileImageUrl,
         };
-        console.log("Returning deserialized user:", sessionUser);
         done(null, sessionUser);
       } else {
-        console.log("User not found in database");
+        console.log("User not found in database:", id);
         done(null, false);
       }
     } catch (error) {

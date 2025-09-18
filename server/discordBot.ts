@@ -416,7 +416,9 @@ class DiscordBot {
         timestamp: new Date().toISOString(),
       };
 
-      await channel.send({ embeds: [embed] });
+      if (channel && 'send' in channel) {
+        await channel.send({ embeds: [embed] });
+      }
     } catch (error) {
       console.error('Error sending withdrawal notification:', error);
     }

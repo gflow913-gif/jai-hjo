@@ -2,14 +2,14 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupGoogleAuth, isAuthenticated } from "./googleAuth";
 import { gameService } from "./gameService";
 import { setupDiscordBot, getDiscordBot } from "./discordBot";
 import { insertChatMessageSchema, insertWithdrawalRequestSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
-  await setupAuth(app);
+  await setupGoogleAuth(app);
 
   // Setup Discord bot
   await setupDiscordBot();
@@ -17,7 +17,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -34,7 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Balance routes
   app.get('/api/balance', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const balance = await storage.getUserBalance(userId);
       if (!balance) {
         return res.status(404).json({ message: "Balance not found" });
@@ -49,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Game routes
   app.post('/api/games/coin-flip', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { amount, choice } = req.body;
       
       if (!amount || !choice || !['heads', 'tails'].includes(choice)) {
@@ -66,7 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/games/dice-roll', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { amount, choice } = req.body;
       
       if (!amount || !choice || choice < 1 || choice > 6) {
@@ -83,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/games/roulette', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { amount, choice } = req.body;
       
       if (!amount || !choice || !['red', 'black'].includes(choice)) {
@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transaction history
   app.get('/api/transactions', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const limit = parseInt(req.query.limit as string) || 20;
       const transactions = await storage.getUserTransactions(userId, limit);
       res.json(transactions);
@@ -126,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Withdrawal routes
   app.post('/api/withdrawal/request', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { amount } = req.body;
       
       if (!amount || amount <= 0) {
@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/withdrawal/requests', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const requests = await storage.getUserWithdrawalRequests(userId);
       res.json(requests);
     } catch (error) {

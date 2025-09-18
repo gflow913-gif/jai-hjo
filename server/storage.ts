@@ -50,30 +50,53 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    
-    // Create initial balance if user is new
-    const existingBalance = await this.getUserBalance(user.id);
-    if (!existingBalance) {
-      await this.createUserBalance({
-        userId: user.id,
-        totalBalance: '5.00',
-        earnedBalance: '0.00',
-        bonusBalance: '5.00',
-      });
+    try {
+      // First try to find existing user by googleId
+      if (userData.googleId) {
+        const [existingUser] = await db.select().from(users).where(eq(users.googleId, userData.googleId));
+        if (existingUser) {
+          // Update existing user
+          const [updatedUser] = await db
+            .update(users)
+            .set({
+              ...userData,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, existingUser.id))
+            .returning();
+          return updatedUser;
+        }
+      }
+
+      // Create new user
+      const [user] = await db
+        .insert(users)
+        .values(userData)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...userData,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      
+      // Create initial balance if user is new
+      const existingBalance = await this.getUserBalance(user.id);
+      if (!existingBalance) {
+        await this.createUserBalance({
+          userId: user.id,
+          totalBalance: '5.00',
+          earnedBalance: '0.00',
+          bonusBalance: '5.00',
+        });
+      }
+      
+      return user;
+    } catch (error) {
+      console.error("Error upserting user:", error);
+      throw error;
     }
-    
-    return user;
   }
 
   // Balance operations

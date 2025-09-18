@@ -1,0 +1,55 @@
+I want to build a Roblox-related gambling website for a game called "Grow a Garden" using a virtual currency called Sheckless (SX). The website should include the following features:
+
+1. **User System**
+   - Users can sign up and log in.
+   - On sign-up, users receive a 5 SX joining bonus.
+   - Track user balances and Sheckless earned through gambling separately.
+
+2. **Gambling System**
+   - Users can gamble their Sheckless in simple games like coin flip, dice roll, and roulette.
+   - Implement fair random number generation for game outcomes.
+   - Update user balances after each bet, and track earned SX (excluding joining bonus).
+
+3. **Withdrawal System**
+   - Users can withdraw only if:
+     - Their total balance is at least 10 SX.
+     - They have earned at least 10 SX through gambling (joining bonus alone cannot be withdrawn).
+   - Display clearly in the dashboard if the user is eligible to withdraw.
+
+4. **Discord Bot Integration**
+   - Build a Discord bot to manage currency:
+     - `!add @user <amount>` → Admin adds Sheckless to user balance.
+     - `!balance` → Users check their balance.
+     - Withdrawal requests from users can be sent to a Discord channel for admin approval.
+   - Secure the bot commands so only admins can add Sheckless.
+
+5. **Chat System**
+   - A simple real-time chat for users to request withdrawals or ask questions.
+   - Can use WebSockets (Socket.IO) or Firebase for real-time updates.
+
+6. **Frontend**
+   - Clean, responsive UI using React + TailwindCSS.
+   - Dashboard shows:
+     - Current balance
+     - Joining bonus
+     - Gambling games
+     - Withdrawal eligibility
+     - Chat box for requests/questions
+
+7. **Backend**
+   - Node.js + Express.js API to manage user accounts, bets, withdrawals, and communication with Discord bot.
+   - MongoDB (or PostgreSQL) database to store users, balances, earned SX, and bet history.
+   - Secure all endpoints (validate inputs, prevent injections, proper authentication).
+
+8. **Security & Misc**
+   - Prevent users from exploiting the system (double-spending, multiple accounts).
+   - Hash passwords if storing login credentials.
+   - Make joining bonus clearly separate from earned SX.
+
+Please generate **full project code structure** including:
+- Frontend React components for dashboard, gambling games, and chat.
+- Backend API routes for user management, bets, withdrawals.
+- Discord bot code integrated with website database.
+- Database schema for users, balances, and bet history.
+- Example of fair gambling logic for coin flip, dice, and roulette.
+- Clear comments in code explaining each section.

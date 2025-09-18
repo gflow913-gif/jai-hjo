@@ -5,7 +5,9 @@ import { storage } from "./storage";
 import { setupGoogleAuth, isAuthenticated } from "./googleAuth";
 import { gameService } from "./gameService";
 import { setupDiscordBot, getDiscordBot } from "./discordBot";
-import { insertChatMessageSchema, insertWithdrawalRequestSchema } from "@shared/schema";
+import { insertChatMessageSchema, insertWithdrawalRequestSchema, users } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -208,6 +210,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid or expired link code" });
       }
       
+      // Check if Discord ID is already linked to another account
+      const [existingUser] = await db.select().from(users).where(eq(users.discordId, discordUserId));
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(409).json({ message: "Discord account is already linked to another user" });
+      }
+      
       // Update user with Discord ID
       const updatedUser = await storage.updateUser(userId, { discordId: discordUserId });
       
@@ -221,6 +229,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WebSocket token endpoint for secure WebSocket authentication
+  const wsTokens = new Map<string, { userId: string; expiresAt: number }>();
+  
+  app.get('/api/auth/ws-token', isAuthenticated, (req: any, res) => {
+    const userId = req.user.id;
+    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes
+    
+    wsTokens.set(token, { userId, expiresAt });
+    
+    // Clean up expired tokens
+    const now = Date.now();
+    const expiredTokens: string[] = [];
+    wsTokens.forEach((data, tokenKey) => {
+      if (now > data.expiresAt) {
+        expiredTokens.push(tokenKey);
+      }
+    });
+    expiredTokens.forEach(tokenKey => wsTokens.delete(tokenKey));
+    
+    res.json({ token });
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server for real-time chat
@@ -230,44 +261,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('New WebSocket connection');
     let authenticatedUserId: string | null = null;
 
-    // Parse session from cookie to authenticate WebSocket
-    const cookies = req.headers.cookie || '';
-    const sessionMatch = cookies.match(/connect\.sid=s%3A([^;]+)/);
-    
-    if (sessionMatch) {
-      try {
-        // For now, we'll authenticate on first message with user verification
-        // In production, you'd want to properly parse the session here
-      } catch (error) {
-        console.error('Session parsing error:', error);
-      }
-    }
-
     ws.on('message', async (data) => {
       try {
         const { type, payload, userId } = JSON.parse(data.toString());
         
-        // Handle authentication handshake - verify against actual session
-        if (type === 'authenticate' && userId) {
-          // In a real implementation, we'd verify the userId against the session
-          // For now, we'll verify the user exists and the connection is from the same session
-          const user = await storage.getUser(userId);
-          if (user) {
-            // Additional session verification would go here in production
-            authenticatedUserId = userId;
-            console.log(`WebSocket authenticated for user: ${userId}`);
-            ws.send(JSON.stringify({
-              type: 'authenticated',
-              payload: { success: true, userId }
-            }));
-          } else {
-            console.log(`WebSocket authentication failed for user: ${userId}`);
+        // Handle authentication with WebSocket token
+        if (type === 'authenticate' && payload.wsToken) {
+          const tokenData = wsTokens.get(payload.wsToken);
+          
+          if (!tokenData) {
             ws.send(JSON.stringify({
               type: 'authentication_failed',
-              payload: { message: 'Invalid user or session' }
+              payload: { message: 'Invalid authentication token' }
             }));
             ws.close();
+            return;
           }
+          
+          if (Date.now() > tokenData.expiresAt) {
+            wsTokens.delete(payload.wsToken);
+            ws.send(JSON.stringify({
+              type: 'authentication_failed',
+              payload: { message: 'Authentication token expired' }
+            }));
+            ws.close();
+            return;
+          }
+          
+          // Token is valid - authenticate the WebSocket
+          authenticatedUserId = tokenData.userId;
+          wsTokens.delete(payload.wsToken); // One-time use
+          
+          console.log(`WebSocket authenticated for user: ${tokenData.userId}`);
+          ws.send(JSON.stringify({
+            type: 'authenticated',
+            payload: { success: true, userId: tokenData.userId }
+          }));
           return;
         }
         

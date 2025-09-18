@@ -38,16 +38,38 @@ export default function Chat() {
     
     const ws = new WebSocket(wsUrl);
     
-    ws.onopen = () => {
+    ws.onopen = async () => {
       console.log('WebSocket connected');
       setSocket(ws);
       
-      // Send authentication after connection
+      // Fetch WebSocket token and authenticate
       if (user) {
-        ws.send(JSON.stringify({
-          type: 'authenticate',
-          userId: (user as any)?.id,
-        }));
+        try {
+          const response = await fetch('/api/auth/ws-token');
+          if (response.ok) {
+            const { token } = await response.json();
+            ws.send(JSON.stringify({
+              type: 'authenticate',
+              payload: { wsToken: token },
+            }));
+          } else {
+            console.error('Failed to get WebSocket token');
+            toast({
+              title: "Connection Error",
+              description: "Failed to authenticate chat connection",
+              variant: "destructive",
+            });
+            ws.close();
+          }
+        } catch (error) {
+          console.error('Error getting WebSocket token:', error);
+          toast({
+            title: "Connection Error",
+            description: "Failed to get authentication token",
+            variant: "destructive",
+          });
+          ws.close();
+        }
       }
     };
     

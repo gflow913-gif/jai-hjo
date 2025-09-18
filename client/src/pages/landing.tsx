@@ -117,11 +117,11 @@ export default function Landing() {
             <Button 
               size="lg" 
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => window.location.href = '/api/auth/google'}
               data-testid="button-login"
             >
-              <i className="fas fa-play mr-2"></i>
-              Start Playing Now
+              <i className="fab fa-google mr-2"></i>
+              Login with Google
             </Button>
           </div>
         </div>

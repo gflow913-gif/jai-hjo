@@ -6,6 +6,10 @@ import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
 export function getSession() {
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET environment variable is required for session security");
+  }
+
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
@@ -15,13 +19,14 @@ export function getSession() {
     tableName: "sessions",
   });
   return session({
-    secret: process.env.SESSION_SECRET || 'fallback-secret-key',
+    secret: process.env.SESSION_SECRET,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false, // Set to true in production with HTTPS
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: sessionTtl,
     },
   });
@@ -40,9 +45,8 @@ export async function setupGoogleAuth(app: Express) {
     callbackURL: "/api/auth/google/callback"
   }, async (accessToken, refreshToken, profile, done) => {
     try {
-      // Map Google profile to our user structure
+      // Map Google profile to our user structure (don't set id, let DB generate)
       const userData = {
-        id: profile.id, // Use Google ID as primary key
         email: profile.emails?.[0]?.value || '',
         firstName: profile.name?.givenName || '',
         lastName: profile.name?.familyName || '',
@@ -114,8 +118,17 @@ export async function setupGoogleAuth(app: Express) {
     req.logout((err) => {
       if (err) {
         console.error("Logout error:", err);
+        return res.status(500).json({ message: "Logout failed" });
       }
-      res.redirect("/");
+      
+      // Destroy session and clear cookie
+      req.session.destroy((sessionErr) => {
+        if (sessionErr) {
+          console.error("Session destroy error:", sessionErr);
+        }
+        res.clearCookie('connect.sid'); // Default express-session cookie name
+        res.redirect("/");
+      });
     });
   });
 }

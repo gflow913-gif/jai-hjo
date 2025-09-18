@@ -55,42 +55,47 @@ export class DatabaseStorage implements IStorage {
       if (userData.googleId) {
         const [existingUser] = await db.select().from(users).where(eq(users.googleId, userData.googleId));
         if (existingUser) {
-          // Update existing user
+          // Update existing user (NEVER update the ID)
+          const updateData = {
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            profileImageUrl: userData.profileImageUrl,
+            provider: userData.provider,
+            updatedAt: new Date(),
+          };
+          
           const [updatedUser] = await db
             .update(users)
-            .set({
-              ...userData,
-              updatedAt: new Date(),
-            })
+            .set(updateData)
             .where(eq(users.id, existingUser.id))
             .returning();
           return updatedUser;
         }
       }
 
-      // Create new user
+      // Create new user (let DB generate the ID, don't use Google ID as primary key)
+      const newUserData = {
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profileImageUrl: userData.profileImageUrl,
+        provider: userData.provider,
+        googleId: userData.googleId,
+      };
+
       const [user] = await db
         .insert(users)
-        .values(userData)
-        .onConflictDoUpdate({
-          target: users.id,
-          set: {
-            ...userData,
-            updatedAt: new Date(),
-          },
-        })
+        .values(newUserData)
         .returning();
       
-      // Create initial balance if user is new
-      const existingBalance = await this.getUserBalance(user.id);
-      if (!existingBalance) {
-        await this.createUserBalance({
-          userId: user.id,
-          totalBalance: '5.00',
-          earnedBalance: '0.00',
-          bonusBalance: '5.00',
-        });
-      }
+      // Create initial balance for new user
+      await this.createUserBalance({
+        userId: user.id,
+        totalBalance: '5.00',
+        earnedBalance: '0.00',
+        bonusBalance: '5.00',
+      });
       
       return user;
     } catch (error) {

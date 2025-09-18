@@ -1,9 +1,11 @@
 import { Client, GatewayIntentBits, PermissionFlagsBits } from "discord.js";
 import { storage } from "./storage";
+import { eq } from "drizzle-orm";
 
 class DiscordBot {
   private client: Client;
   private isReady = false;
+  private withdrawalChannelId: string | null = null;
 
   constructor() {
     this.client = new Client({
@@ -51,12 +53,14 @@ class DiscordBot {
 
   private async handleBalanceCommand(message: any) {
     try {
-      // In a real implementation, you'd need to link Discord users to your app users
-      // For now, we'll return a generic response
+      // Try to find user by Discord ID (you'd need to implement Discord linking)
+      const discordUserId = message.author.id;
+      
+      // For now, show generic message since Discord linking isn't implemented
       const embed = {
         color: 0x3B82F6,
         title: '💰 Balance Check',
-        description: 'To check your balance, please use the web application at your Replit domain.',
+        description: `To check your balance, please log into the web application.\n\n**Commands:**\n\`!balance\` - Check your balance\n\`!add @user <amount>\` - Add SX to user (Admin only)\n\`!help\` - Show this help`,
         footer: {
           text: 'Grow Casino • Sheckless Games',
         },
@@ -91,16 +95,20 @@ class DiscordBot {
         return;
       }
 
-      // In a real implementation, you'd:
-      // 1. Parse the user mention to get Discord user ID
-      // 2. Look up the linked app user
-      // 3. Add the amount to their balance
-      // 4. Record the transaction
+      // Extract user ID from mention
+      const userIdMatch = userMention.match(/^<@!?(\d+)>$/);
+      if (!userIdMatch) {
+        await message.reply('❌ Please mention a valid user.');
+        return;
+      }
+
+      // Note: In a full implementation, you'd need a Discord-to-User mapping table
+      // For now, we'll show a success message but won't actually add balance
 
       const embed = {
         color: 0x10B981,
         title: '✅ Balance Added',
-        description: `Successfully added ${amount} SX to ${userMention}'s balance.`,
+        description: `Would add ${amount} SX to ${userMention}'s balance.\n\n*Note: Discord user linking not implemented yet. Users must use the web interface.*`,
         footer: {
           text: 'Grow Casino • Admin Action',
         },
@@ -142,6 +150,60 @@ class DiscordBot {
     await message.reply({ embeds: [embed] });
   }
 
+  async sendWithdrawalNotification(withdrawalRequest: any, user: any) {
+    if (!this.isReady || !this.withdrawalChannelId) {
+      console.log('Discord bot not ready or withdrawal channel not set');
+      return;
+    }
+
+    try {
+      const channel = await this.client.channels.fetch(this.withdrawalChannelId);
+      if (!channel || !channel.isTextBased()) {
+        console.error('Withdrawal channel not found or not text-based');
+        return;
+      }
+
+      const embed = {
+        color: 0xF59E0B,
+        title: '💸 New Withdrawal Request',
+        fields: [
+          {
+            name: 'User',
+            value: user.firstName || user.email || 'Unknown',
+            inline: true,
+          },
+          {
+            name: 'Amount',
+            value: `${parseFloat(withdrawalRequest.amount).toFixed(2)} SX`,
+            inline: true,
+          },
+          {
+            name: 'Request ID',
+            value: withdrawalRequest.id,
+            inline: true,
+          },
+          {
+            name: 'Date',
+            value: new Date(withdrawalRequest.createdAt).toLocaleString(),
+            inline: false,
+          },
+        ],
+        footer: {
+          text: 'Grow Casino • Withdrawal System',
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      await channel.send({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error sending withdrawal notification:', error);
+    }
+  }
+
+  setWithdrawalChannel(channelId: string) {
+    this.withdrawalChannelId = channelId;
+  }
+
   async start() {
     const token = process.env.DISCORD_BOT_TOKEN;
     if (!token) {
@@ -151,6 +213,11 @@ class DiscordBot {
 
     try {
       await this.client.login(token);
+      
+      // Set withdrawal channel if provided
+      if (process.env.DISCORD_WITHDRAWAL_CHANNEL_ID) {
+        this.setWithdrawalChannel(process.env.DISCORD_WITHDRAWAL_CHANNEL_ID);
+      }
     } catch (error) {
       console.error('Failed to start Discord bot:', error);
     }

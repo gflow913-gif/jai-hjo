@@ -10,10 +10,10 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 
 interface WithdrawalSectionProps {
   balance: any;
-  onRefresh: () => void;
+  onWithdrawalCreated: () => void;
 }
 
-export default function WithdrawalSection({ balance, onRefresh }: WithdrawalSectionProps) {
+export default function WithdrawalSection({ balance, onWithdrawalCreated }: WithdrawalSectionProps) {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const { toast } = useToast();
 
@@ -28,7 +28,7 @@ export default function WithdrawalSection({ balance, onRefresh }: WithdrawalSect
     },
     onSuccess: () => {
       setWithdrawAmount("");
-      onRefresh();
+      onWithdrawalCreated();
       toast({
         title: "Withdrawal Requested",
         description: "Your withdrawal request has been sent to Discord for admin approval.",

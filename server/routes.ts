@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { gameService } from "./gameService";
-import { setupDiscordBot } from "./discordBot";
+import { setupDiscordBot, getDiscordBot } from "./discordBot";
 import { insertChatMessageSchema, insertWithdrawalRequestSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -159,6 +159,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: amount.toString(),
         status: 'pending',
       });
+
+      // Send Discord notification
+      const discordBot = getDiscordBot();
+      if (discordBot) {
+        const user = await storage.getUser(userId);
+        if (user) {
+          await discordBot.sendWithdrawalNotification(withdrawalRequest, user);
+        }
+      }
 
       res.json(withdrawalRequest);
     } catch (error) {

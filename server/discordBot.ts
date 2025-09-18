@@ -1,13 +1,14 @@
 import { Client, GatewayIntentBits, PermissionFlagsBits } from "discord.js";
 import { storage } from "./storage";
 import { eq } from "drizzle-orm";
-import { users } from "@shared/schema";
+import { users, withdrawalRequests } from "@shared/schema";
 import { db } from "./db";
 
 class DiscordBot {
   private client: Client;
   private isReady = false;
   private withdrawalChannelId: string | null = null;
+  private linkingCodes: Map<string, { discordUserId: string; expiresAt: number }> = new Map();
 
   constructor() {
     this.client = new Client({
@@ -50,6 +51,11 @@ class DiscordBot {
       // Handle reject command (admin only)
       if (content.startsWith('!reject ')) {
         await this.handleRejectCommand(message);
+      }
+      
+      // Handle link command
+      if (content === '!link') {
+        await this.handleLinkCommand(message);
       }
       
       // Handle help command
@@ -239,6 +245,57 @@ class DiscordBot {
 
       const requestId = args[1].trim();
       
+      // Get the withdrawal request first
+      const [existingRequest] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, requestId));
+      
+      if (!existingRequest) {
+        await message.reply('❌ Withdrawal request not found.');
+        return;
+      }
+      
+      if (existingRequest.status !== 'pending') {
+        await message.reply(`❌ Withdrawal request is already ${existingRequest.status}.`);
+        return;
+      }
+      
+      // Get user and their current balance
+      const user = await storage.getUser(existingRequest.userId);
+      const balance = await storage.getUserBalance(existingRequest.userId);
+      
+      if (!user || !balance) {
+        await message.reply('❌ User or balance not found.');
+        return;
+      }
+      
+      const withdrawalAmount = parseFloat(existingRequest.amount);
+      const currentEarned = parseFloat(balance.earnedBalance);
+      const currentTotal = parseFloat(balance.totalBalance);
+      
+      // Verify they still have sufficient balance
+      if (withdrawalAmount > currentEarned) {
+        await message.reply('❌ User no longer has sufficient earned balance for this withdrawal.');
+        return;
+      }
+      
+      // Update balances - debit from both earned and total
+      await storage.updateUserBalance(existingRequest.userId, {
+        earnedBalance: (currentEarned - withdrawalAmount).toFixed(2),
+        totalBalance: (currentTotal - withdrawalAmount).toFixed(2),
+      });
+      
+      // Record the withdrawal transaction
+      await storage.createTransaction({
+        userId: existingRequest.userId,
+        type: 'withdrawal',
+        amount: (-withdrawalAmount).toFixed(2), // Negative for withdrawal
+        balanceAfter: (currentTotal - withdrawalAmount).toFixed(2),
+        gameData: {
+          withdrawalRequestId: requestId,
+          approvedBy: message.author.id,
+          approvedByUsername: message.author.username,
+        },
+      });
+      
       // Update withdrawal request status
       const updatedRequest = await storage.updateWithdrawalRequest(requestId, {
         status: 'approved',
@@ -294,10 +351,37 @@ class DiscordBot {
 
       const requestId = args[1].trim();
       
-      // Update withdrawal request status
+      // Get the withdrawal request first  
+      const [existingRequest] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, requestId));
+      
+      if (!existingRequest) {
+        await message.reply('❌ Withdrawal request not found.');
+        return;
+      }
+      
+      if (existingRequest.status !== 'pending') {
+        await message.reply(`❌ Withdrawal request is already ${existingRequest.status}.`);
+        return;
+      }
+      
+      // Update withdrawal request status (no balance changes needed for rejection)
       const updatedRequest = await storage.updateWithdrawalRequest(requestId, {
         status: 'rejected',
         processedAt: new Date(),
+      });
+      
+      // Record rejection in transaction log for audit
+      await storage.createTransaction({
+        userId: existingRequest.userId,
+        type: 'withdrawal',
+        amount: '0.00', // No balance change
+        balanceAfter: '0.00', // Will be ignored since amount is 0
+        gameData: {
+          withdrawalRequestId: requestId,
+          rejectedBy: message.author.id,
+          rejectedByUsername: message.author.username,
+          status: 'rejected',
+        },
       });
 
       const embed = {
@@ -333,6 +417,84 @@ class DiscordBot {
     }
   }
 
+  private async handleLinkCommand(message: any) {
+    try {
+      const discordUserId = message.author.id;
+      
+      // Check if user is already linked
+      const [existingUser] = await db.select().from(users).where(eq(users.discordId, discordUserId));
+      
+      if (existingUser) {
+        const embed = {
+          color: 0x10B981,
+          title: '✅ Already Linked',
+          description: `Your Discord account is already linked to your Grow Casino account.\n\n**Email:** ${existingUser.email || 'N/A'}\n**Name:** ${existingUser.firstName || 'N/A'}`,
+          footer: {
+            text: 'Grow Casino • Account Linking',
+          },
+        };
+        await message.reply({ embeds: [embed] });
+        return;
+      }
+      
+      // Generate a unique 6-digit code
+      const linkCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes
+      
+      // Store the linking code
+      this.linkingCodes.set(linkCode, {
+        discordUserId,
+        expiresAt
+      });
+      
+      // Clean up expired codes
+      this.cleanupExpiredCodes();
+      
+      const embed = {
+        color: 0x3B82F6,
+        title: '🔗 Link Your Account',
+        description: `To link your Discord account to Grow Casino:\n\n1. Log into the website: **https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'your-domain.replit.app'}**\n2. Go to your dashboard\n3. Enter this code: **${linkCode}**\n\n⏱️ This code expires in 10 minutes.`,
+        footer: {
+          text: 'Grow Casino • Account Linking',
+        },
+        timestamp: new Date().toISOString(),
+      };
+      
+      await message.reply({ embeds: [embed] });
+      
+    } catch (error) {
+      console.error('Error handling link command:', error);
+      await message.reply('❌ Error generating link code. Please try again later.');
+    }
+  }
+
+  private cleanupExpiredCodes() {
+    const now = Date.now();
+    const codesToDelete: string[] = [];
+    
+    this.linkingCodes.forEach((data, code) => {
+      if (now > data.expiresAt) {
+        codesToDelete.push(code);
+      }
+    });
+    
+    codesToDelete.forEach(code => this.linkingCodes.delete(code));
+  }
+
+  public verifyLinkCode(code: string): string | null {
+    const linkData = this.linkingCodes.get(code.toUpperCase());
+    if (!linkData) return null;
+    
+    if (Date.now() > linkData.expiresAt) {
+      this.linkingCodes.delete(code);
+      return null;
+    }
+    
+    // Return the Discord user ID and remove the code (one-time use)
+    this.linkingCodes.delete(code);
+    return linkData.discordUserId;
+  }
+
   private async handleHelpCommand(message: any) {
     const embed = {
       color: 0x6366F1,
@@ -356,6 +518,11 @@ class DiscordBot {
         {
           name: '!reject <request_id>',
           value: 'Reject a withdrawal request (Admin only)',
+          inline: false,
+        },
+        {
+          name: '!link',
+          value: 'Link your Discord account to your Grow Casino account',
           inline: false,
         },
         {

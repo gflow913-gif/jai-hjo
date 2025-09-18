@@ -1,6 +1,8 @@
 import { Client, GatewayIntentBits, PermissionFlagsBits } from "discord.js";
 import { storage } from "./storage";
 import { eq } from "drizzle-orm";
+import { users } from "@shared/schema";
+import { db } from "./db";
 
 class DiscordBot {
   private client: Client;
@@ -40,6 +42,16 @@ class DiscordBot {
         await this.handleAddCommand(message);
       }
       
+      // Handle approve command (admin only)
+      if (content.startsWith('!approve ')) {
+        await this.handleApproveCommand(message);
+      }
+      
+      // Handle reject command (admin only)
+      if (content.startsWith('!reject ')) {
+        await this.handleRejectCommand(message);
+      }
+      
       // Handle help command
       if (content === '!help') {
         await this.handleHelpCommand(message);
@@ -53,17 +65,54 @@ class DiscordBot {
 
   private async handleBalanceCommand(message: any) {
     try {
-      // Try to find user by Discord ID (you'd need to implement Discord linking)
       const discordUserId = message.author.id;
       
-      // For now, show generic message since Discord linking isn't implemented
+      // Find user by Discord ID
+      const [user] = await db.select().from(users).where(eq(users.discordId, discordUserId));
+      
+      if (!user) {
+        const embed = {
+          color: 0xF59E0B,
+          title: '🔗 Account Not Linked',
+          description: `Your Discord account is not linked to a Grow Casino account.\n\nTo link your account:\n1. Log into the web application\n2. Use the \`!link\` command (coming soon)\n\nOr create an account at the web application first.`,
+          footer: {
+            text: 'Grow Casino • Account Linking',
+          },
+        };
+        await message.reply({ embeds: [embed] });
+        return;
+      }
+
+      const balance = await storage.getUserBalance(user.id);
+      if (!balance) {
+        await message.reply('❌ Could not retrieve balance. Please try again later.');
+        return;
+      }
+
       const embed = {
-        color: 0x3B82F6,
-        title: '💰 Balance Check',
-        description: `To check your balance, please log into the web application.\n\n**Commands:**\n\`!balance\` - Check your balance\n\`!add @user <amount>\` - Add SX to user (Admin only)\n\`!help\` - Show this help`,
+        color: 0x10B981,
+        title: '💰 Your Balance',
+        fields: [
+          {
+            name: 'Total Balance',
+            value: `${parseFloat(balance.totalBalance).toFixed(2)} SX`,
+            inline: true,
+          },
+          {
+            name: 'Earned Balance',
+            value: `${parseFloat(balance.earnedBalance).toFixed(2)} SX`,
+            inline: true,
+          },
+          {
+            name: 'Bonus Balance',
+            value: `${parseFloat(balance.bonusBalance).toFixed(2)} SX`,
+            inline: true,
+          },
+        ],
         footer: {
-          text: 'Grow Casino • Sheckless Games',
+          text: 'Grow Casino • Balance Check',
         },
+        timestamp: new Date().toISOString(),
       };
 
       await message.reply({ embeds: [embed] });
@@ -102,22 +151,185 @@ class DiscordBot {
         return;
       }
 
-      // Note: In a full implementation, you'd need a Discord-to-User mapping table
-      // For now, we'll show a success message but won't actually add balance
+      const discordUserId = userIdMatch[1];
+      
+      // Find user by Discord ID
+      const [user] = await db.select().from(users).where(eq(users.discordId, discordUserId));
+      
+      if (!user) {
+        await message.reply(`❌ ${userMention} has not linked their Discord account to Grow Casino yet.`);
+        return;
+      }
+
+      // Get current balance
+      const currentBalance = await storage.getUserBalance(user.id);
+      if (!currentBalance) {
+        await message.reply('❌ Could not retrieve user balance. Please try again later.');
+        return;
+      }
+
+      // Add the amount to their earned balance (admin bonus)
+      const newEarnedBalance = parseFloat(currentBalance.earnedBalance) + amount;
+      const newTotalBalance = parseFloat(currentBalance.totalBalance) + amount;
+
+      await storage.updateUserBalance(user.id, {
+        earnedBalance: newEarnedBalance.toFixed(2),
+        totalBalance: newTotalBalance.toFixed(2),
+      });
+
+      // Record transaction
+      await storage.createTransaction({
+        userId: user.id,
+        type: 'bonus',
+        amount: amount.toFixed(2),
+        balanceAfter: newTotalBalance.toFixed(2),
+        gameData: {
+          source: 'discord_admin',
+          adminUserId: message.author.id,
+          adminUsername: message.author.username,
+        },
+      });
 
       const embed = {
         color: 0x10B981,
-        title: '✅ Balance Added',
-        description: `Would add ${amount} SX to ${userMention}'s balance.\n\n*Note: Discord user linking not implemented yet. Users must use the web interface.*`,
+        title: '✅ Balance Added Successfully',
+        fields: [
+          {
+            name: 'User',
+            value: `${user.firstName || user.email}`,
+            inline: true,
+          },
+          {
+            name: 'Amount Added',
+            value: `${amount.toFixed(2)} SX`,
+            inline: true,
+          },
+          {
+            name: 'New Total Balance',
+            value: `${newTotalBalance.toFixed(2)} SX`,
+            inline: true,
+          },
+        ],
         footer: {
-          text: 'Grow Casino • Admin Action',
+          text: `Admin Action by ${message.author.username}`,
         },
+        timestamp: new Date().toISOString(),
       };
 
       await message.reply({ embeds: [embed] });
     } catch (error) {
       console.error('Error handling add command:', error);
       await message.reply('❌ Error adding balance. Please try again later.');
+    }
+  }
+
+  private async handleApproveCommand(message: any) {
+    try {
+      // Check if user has admin permissions
+      if (!message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+        await message.reply('❌ You need administrator permissions to use this command.');
+        return;
+      }
+
+      const args = message.content.split(' ');
+      if (args.length !== 2) {
+        await message.reply('❌ Usage: `!approve <request_id>`');
+        return;
+      }
+
+      const requestId = args[1].trim();
+      
+      // Update withdrawal request status
+      const updatedRequest = await storage.updateWithdrawalRequest(requestId, {
+        status: 'approved',
+        processedAt: new Date(),
+      });
+
+      const embed = {
+        color: 0x10B981,
+        title: '✅ Withdrawal Approved',
+        fields: [
+          {
+            name: 'Request ID',
+            value: requestId,
+            inline: true,
+          },
+          {
+            name: 'Amount',
+            value: `${parseFloat(updatedRequest.amount).toFixed(2)} SX`,
+            inline: true,
+          },
+          {
+            name: 'Status',
+            value: 'Approved',
+            inline: true,
+          },
+        ],
+        footer: {
+          text: `Admin Action by ${message.author.username}`,
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      await message.reply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error handling approve command:', error);
+      await message.reply('❌ Error approving withdrawal. Please check the request ID and try again.');
+    }
+  }
+
+  private async handleRejectCommand(message: any) {
+    try {
+      // Check if user has admin permissions
+      if (!message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+        await message.reply('❌ You need administrator permissions to use this command.');
+        return;
+      }
+
+      const args = message.content.split(' ');
+      if (args.length !== 2) {
+        await message.reply('❌ Usage: `!reject <request_id>`');
+        return;
+      }
+
+      const requestId = args[1].trim();
+      
+      // Update withdrawal request status
+      const updatedRequest = await storage.updateWithdrawalRequest(requestId, {
+        status: 'rejected',
+        processedAt: new Date(),
+      });
+
+      const embed = {
+        color: 0xEF4444,
+        title: '❌ Withdrawal Rejected',
+        fields: [
+          {
+            name: 'Request ID',
+            value: requestId,
+            inline: true,
+          },
+          {
+            name: 'Amount',
+            value: `${parseFloat(updatedRequest.amount).toFixed(2)} SX`,
+            inline: true,
+          },
+          {
+            name: 'Status',
+            value: 'Rejected',
+            inline: true,
+          },
+        ],
+        footer: {
+          text: `Admin Action by ${message.author.username}`,
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      await message.reply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error handling reject command:', error);
+      await message.reply('❌ Error rejecting withdrawal. Please check the request ID and try again.');
     }
   }
 
@@ -134,6 +346,16 @@ class DiscordBot {
         {
           name: '!add @user <amount>',
           value: 'Add SX to a user\'s balance (Admin only)',
+          inline: false,
+        },
+        {
+          name: '!approve <request_id>',
+          value: 'Approve a withdrawal request (Admin only)',
+          inline: false,
+        },
+        {
+          name: '!reject <request_id>',
+          value: 'Reject a withdrawal request (Admin only)',
           inline: false,
         },
         {
@@ -215,8 +437,8 @@ class DiscordBot {
       await this.client.login(token);
       
       // Set withdrawal channel if provided
-      if (process.env.DISCORD_WITHDRAWAL_CHANNEL_ID) {
-        this.setWithdrawalChannel(process.env.DISCORD_WITHDRAWAL_CHANNEL_ID);
+      if (process.env.DISCORD_ADMIN_CHANNEL_ID) {
+        this.setWithdrawalChannel(process.env.DISCORD_ADMIN_CHANNEL_ID);
       }
     } catch (error) {
       console.error('Failed to start Discord bot:', error);

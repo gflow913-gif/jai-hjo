@@ -17,6 +17,8 @@ if (!process.env.DATABASE_URL) {
 // Configure the pool with SSL options to handle certificate issues
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
+  ssl: {
+    rejectUnauthorized: false // Accept self-signed certificates for Neon serverless
+  }
 });
 export const db = drizzle({ client: pool, schema });

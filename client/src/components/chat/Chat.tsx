@@ -40,14 +40,30 @@ export default function Chat() {
     
     ws.onopen = () => {
       console.log('WebSocket connected');
-      setIsConnected(true);
       setSocket(ws);
+      
+      // Send authentication after connection
+      if (user) {
+        ws.send(JSON.stringify({
+          type: 'authenticate',
+          userId: (user as any)?.id,
+        }));
+      }
     };
     
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'chat_message') {
+        if (data.type === 'authenticated') {
+          console.log('WebSocket authenticated');
+          setIsConnected(true);
+        } else if (data.type === 'authentication_failed') {
+          toast({
+            title: "Authentication Failed",
+            description: "Unable to authenticate chat connection",
+            variant: "destructive",
+          });
+        } else if (data.type === 'chat_message') {
           setMessages(prev => [...prev, data.payload]);
         } else if (data.type === 'error') {
           toast({
@@ -97,7 +113,6 @@ export default function Chat() {
     try {
       socket.send(JSON.stringify({
         type: 'chat_message',
-        userId: (user as any)?.id,
         payload: {
           message: newMessage.trim(),
         },

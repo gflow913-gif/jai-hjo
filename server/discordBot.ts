@@ -80,7 +80,7 @@ class DiscordBot {
         const embed = {
           color: 0xF59E0B,
           title: '🔗 Account Not Linked',
-          description: `Your Discord account is not linked to a Grow Casino account.\n\nTo link your account:\n1. Log into the web application\n2. Use the \`!link\` command (coming soon)\n\nOr create an account at the web application first.`,
+          description: `Your Discord account is not linked to a Grow Casino account.\n\n**To link your account:**\n1. Use the \`!link\` command to get a linking code\n2. Log into the web application\n3. Enter the code in the Discord section on your dashboard\n\nOr create an account at the web application first.`,
           footer: {
             text: 'Grow Casino • Account Linking',
           },
@@ -202,7 +202,7 @@ class DiscordBot {
         fields: [
           {
             name: 'User',
-            value: `${user.firstName || user.email}`,
+            value: `${user.username || user.firstName || user.email}`,
             inline: true,
           },
           {
@@ -428,7 +428,7 @@ class DiscordBot {
         const embed = {
           color: 0x10B981,
           title: '✅ Already Linked',
-          description: `Your Discord account is already linked to your Grow Casino account.\n\n**Email:** ${existingUser.email || 'N/A'}\n**Name:** ${existingUser.firstName || 'N/A'}`,
+          description: `Your Discord account is already linked to your Grow Casino account.\n\n**Username:** ${existingUser.username || 'Not set yet'}\n**Email:** ${existingUser.email || 'N/A'}\n**Name:** ${existingUser.firstName || 'N/A'}`,
           footer: {
             text: 'Grow Casino • Account Linking',
           },
@@ -558,7 +558,7 @@ class DiscordBot {
         fields: [
           {
             name: 'User',
-            value: user.firstName || user.email || 'Unknown',
+            value: user.username || user.firstName || user.email || 'Unknown',
             inline: true,
           },
           {

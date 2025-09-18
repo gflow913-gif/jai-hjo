@@ -7,6 +7,7 @@ import CoinFlip from "@/components/games/CoinFlip";
 import DiceRoll from "@/components/games/DiceRoll";
 import Roulette from "@/components/games/Roulette";
 import WithdrawalSection from "@/components/withdrawal/WithdrawalSection";
+import DiscordLinking from "@/components/discord/DiscordLinking";
 import Chat from "@/components/chat/Chat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -170,7 +171,7 @@ export default function Dashboard() {
       {/* Welcome Section */}
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-foreground mb-2" data-testid="text-welcome">
-          Welcome back, {(userWithBalance as any)?.firstName || 'Player'}!
+          Welcome back, {(userWithBalance as any)?.username || (userWithBalance as any)?.firstName || 'Player'}!
         </h2>
         <p className="text-muted-foreground mb-6">
           {earnedBalance >= 10 && totalBalance >= 10 
@@ -322,6 +323,10 @@ export default function Dashboard() {
               refetchUser();
               refetchWithdrawals();
             }} 
+          />
+          <DiscordLinking 
+            user={userWithBalance} 
+            onUpdate={refetchUser} 
           />
           <Chat />
         </div>

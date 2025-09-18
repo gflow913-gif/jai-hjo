@@ -6,15 +6,28 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
+import UsernameSetup from "@/pages/username-setup";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user, refetch } = useAuth();
 
   return (
     <Switch>
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
+      ) : user && !(user as any).isUsernameSet ? (
+        // Show username setup if user hasn't chosen a username yet
+        <Route path="*">
+          {() => (
+            <UsernameSetup 
+              user={user} 
+              onComplete={() => {
+                refetch(); // Refresh user data after username is set
+              }} 
+            />
+          )}
+        </Route>
       ) : (
         <>
           <Route path="/" component={Dashboard} />

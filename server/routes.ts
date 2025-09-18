@@ -33,6 +33,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update username route
+  app.post('/api/auth/set-username', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { username } = req.body;
+      
+      if (!username || typeof username !== 'string' || username.trim().length < 3) {
+        return res.status(400).json({ message: "Username must be at least 3 characters long" });
+      }
+      
+      if (username.trim().length > 20) {
+        return res.status(400).json({ message: "Username must be less than 20 characters" });
+      }
+      
+      const cleanUsername = username.trim();
+      
+      // Server-side validation - only alphanumeric and underscore
+      if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+        return res.status(400).json({ message: "Username can only contain letters, numbers, and underscores" });
+      }
+      
+      // Check if username is already taken (case-insensitive)
+      const [existingUser] = await db.select().from(users).where(eq(users.username, cleanUsername));
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(409).json({ message: "Username is already taken" });
+      }
+      
+      // Update user with chosen username
+      const updatedUser = await storage.updateUser(userId, {
+        username: cleanUsername,
+        isUsernameSet: true,
+      });
+      
+      res.json({ 
+        message: "Username updated successfully",
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error("Error setting username:", error);
+      res.status(500).json({ message: "Failed to update username" });
+    }
+  });
+
   // Balance routes
   app.get('/api/balance', isAuthenticated, async (req: any, res) => {
     try {

@@ -34,10 +34,12 @@ export const users = pgTable("users", {
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  username: varchar("username").unique(), // Casino display name chosen by user
   profileImageUrl: varchar("profile_image_url"),
   provider: varchar("provider").default('google'),
   googleId: varchar("google_id").unique(),
   discordId: varchar("discord_id").unique(),
+  isUsernameSet: boolean("is_username_set").default(false), // Track if user has chosen username
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

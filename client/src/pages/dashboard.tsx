@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/Sidebar";
 import CoinFlip from "@/components/games/CoinFlip";
 import DiceRoll from "@/components/games/DiceRoll";
@@ -20,10 +20,19 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
-  const { data: transactions } = useQuery({
+  const { data: transactions, refetch: refetchTransactions } = useQuery({
     queryKey: ["/api/transactions"],
     enabled: isAuthenticated,
   });
+
+  const queryClient = useQueryClient();
+
+  const handleGameComplete = () => {
+    refetchUser();
+    refetchTransactions();
+    // Also invalidate the cache to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+  };
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -178,9 +187,9 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <CoinFlip balance={totalBalance} onGameComplete={refetchUser} />
-                      <DiceRoll balance={totalBalance} onGameComplete={refetchUser} />
-                      <Roulette balance={totalBalance} onGameComplete={refetchUser} />
+                      <CoinFlip balance={totalBalance} onGameComplete={handleGameComplete} />
+                      <DiceRoll balance={totalBalance} onGameComplete={handleGameComplete} />
+                      <Roulette balance={totalBalance} onGameComplete={handleGameComplete} />
                     </div>
                   </CardContent>
                 </Card>

@@ -114,15 +114,18 @@ class GameService {
   }
 
   async playRoulette(userId: string, betAmount: number, choice: 'red' | 'black'): Promise<GameResult> {
-    // Roulette wheel with 18 red, 18 black, 2 green (0, 00)
+    // American Roulette wheel: 18 red, 18 black, 2 green (0, 00)
+    // Numbers 1-36 plus 0 and 00 (represented as 37)
     const number = this.generateSecureRandom(38); // 0-37
     let result: 'red' | 'black' | 'green';
     
     if (number === 0 || number === 37) { // 0 and 00 (green)
       result = 'green';
     } else if ([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(number)) {
+      // Red numbers in American Roulette
       result = 'red';
     } else {
+      // Black numbers: 2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35
       result = 'black';
     }
 

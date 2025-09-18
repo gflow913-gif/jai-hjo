@@ -23,7 +23,7 @@ class DiscordBot {
   }
 
   private setupEventHandlers() {
-    this.client.once('ready', () => {
+    this.client.once('clientReady', () => {
       console.log(`Discord bot logged in as ${this.client.user?.tag}`);
       this.isReady = true;
     });
@@ -596,9 +596,9 @@ class DiscordBot {
   }
 
   async start() {
-    const token = process.env.DISCORD_BOT_TOKEN;
+    const token = process.env.DISCORD_TOKEN;
     if (!token) {
-      console.warn('DISCORD_BOT_TOKEN not provided, Discord bot will not start');
+      console.warn('DISCORD_TOKEN not provided, Discord bot will not start');
       return;
     }
 
@@ -606,8 +606,10 @@ class DiscordBot {
       await this.client.login(token);
       
       // Set withdrawal channel if provided
-      if (process.env.DISCORD_ADMIN_CHANNEL_ID) {
-        this.setWithdrawalChannel(process.env.DISCORD_ADMIN_CHANNEL_ID);
+      if (process.env.DISCORD_GUILD_ID) {
+        console.log('Discord bot connected to guild:', process.env.DISCORD_GUILD_ID);
+        // Note: You can set a specific channel ID for withdrawal notifications if needed
+        // this.setWithdrawalChannel('YOUR_CHANNEL_ID');
       }
     } catch (error) {
       console.error('Failed to start Discord bot:', error);

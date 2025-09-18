@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(240 10% 6%);
+  --foreground: hsl(0 0% 98%);
+  --card: hsl(240 10% 9%);
+  --card-foreground: hsl(0 0% 95%);
+  --popover: hsl(240 10% 9%);
+  --popover-foreground: hsl(0 0% 95%);
+  --primary: hsl(217 91% 60%);
+  --primary-foreground: hsl(0 0% 98%);
+  --secondary: hsl(240 5% 15%);
+  --secondary-foreground: hsl(0 0% 90%);
+  --muted: hsl(240 5% 15%);
+  --muted-foreground: hsl(240 5% 65%);
+  --accent: hsl(142 76% 36%);
+  --accent-foreground: hsl(0 0% 98%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(240 6% 20%);
+  --input: hsl(240 6% 20%);
+  --ring: hsl(217 91% 60%);
+  --chart-1: hsl(217 91% 60%);
+  --chart-2: hsl(142 76% 36%);
+  --chart-3: hsl(42 92% 56%);
+  --chart-4: hsl(147 78% 42%);
+  --chart-5: hsl(341 75% 51%);
+  --sidebar: hsl(240 10% 9%);
+  --sidebar-foreground: hsl(0 0% 95%);
+  --sidebar-primary: hsl(217 91% 60%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 5% 15%);
+  --sidebar-accent-foreground: hsl(142 76% 36%);
+  --sidebar-border: hsl(240 6% 20%);
+  --sidebar-ring: hsl(217 91% 60%);
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: 0.75rem;
+  --shadow-2xs: 0px 2px 0px 0px hsl(217 91% 60% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(217 91% 60% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 1px 2px -1px hsl(217 91% 60% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 1px 2px -1px hsl(217 91% 60% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 2px 4px -1px hsl(217 91% 60% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 4px 6px -1px hsl(217 91% 60% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(217 91% 60% / 0.00), 0px 8px 10px -1px hsl(217 91% 60% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(217 91% 60% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+.dark {
+  --background: hsl(240 10% 6%);
+  --foreground: hsl(0 0% 98%);
+  --card: hsl(240 10% 9%);
+  --card-foreground: hsl(0 0% 95%);
+  --popover: hsl(240 10% 9%);
+  --popover-foreground: hsl(0 0% 95%);
+  --primary: hsl(217 91% 60%);
+  --primary-foreground: hsl(0 0% 98%);
+  --secondary: hsl(240 5% 15%);
+  --secondary-foreground: hsl(0 0% 90%);
+  --muted: hsl(240 5% 15%);
+  --muted-foreground: hsl(240 5% 65%);
+  --accent: hsl(142 76% 36%);
+  --accent-foreground: hsl(0 0% 98%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(240 6% 20%);
+  --input: hsl(240 6% 20%);
+  --ring: hsl(217 91% 60%);
+  --chart-1: hsl(217 91% 60%);
+  --chart-2: hsl(142 76% 36%);
+  --chart-3: hsl(42 92% 56%);
+  --chart-4: hsl(147 78% 42%);
+  --chart-5: hsl(341 75% 51%);
+  --sidebar: hsl(240 10% 9%);
+  --sidebar-foreground: hsl(0 0% 95%);
+  --sidebar-primary: hsl(217 91% 60%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 5% 15%);
+  --sidebar-accent-foreground: hsl(142 76% 36%);
+  --sidebar-border: hsl(240 6% 20%);
+  --sidebar-ring: hsl(217 91% 60%);
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Custom styles for casino theme */
+.gradient-bg {
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(240 10% 8%) 50%, hsl(var(--background)) 100%);
+}
+
+.glow-effect {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.roulette-wheel {
+  background: conic-gradient(
+    from 0deg,
+    #ef4444 0deg 20deg,
+    #1f2937 20deg 40deg,
+    #ef4444 40deg 60deg,
+    #1f2937 60deg 80deg,
+    #ef4444 80deg 100deg,
+    #1f2937 100deg 120deg,
+    #ef4444 120deg 140deg,
+    #1f2937 140deg 160deg,
+    #ef4444 160deg 180deg,
+    #1f2937 180deg 200deg,
+    #ef4444 200deg 220deg,
+    #1f2937 220deg 240deg,
+    #ef4444 240deg 260deg,
+    #1f2937 260deg 280deg,
+    #ef4444 280deg 300deg,
+    #1f2937 300deg 320deg,
+    #ef4444 320deg 340deg,
+    #1f2937 340deg 360deg
+  );
+}
+
+.chat-container {
+  height: 400px;
+  overflow-y: auto;
+}
+
+.chat-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-container::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
+  border-radius: 2px;
+}
+
+/* Animation utilities */
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce 2s infinite;
+}

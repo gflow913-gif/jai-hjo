@@ -38,11 +38,17 @@ export async function setupGoogleAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Google OAuth strategy
+  // Google OAuth strategy - use dynamic callback URL for Replit
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : process.env.NODE_ENV === 'production'
+    ? `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`
+    : `http://localhost:${process.env.PORT || 5000}`;
+    
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: "/api/auth/google/callback"
+    callbackURL: `${baseUrl}/api/auth/google/callback`
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       console.log("Google OAuth callback - User authenticated", { userId: profile.id });

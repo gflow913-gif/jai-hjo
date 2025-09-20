@@ -4,6 +4,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import { createSecureAgent } from "./httpsAgent";
 
 export function getSession() {
   if (!process.env.SESSION_SECRET) {
@@ -52,7 +53,7 @@ export async function setupGoogleAuth(app: Express) {
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     callbackURL: `${baseUrl}/api/auth/google/callback`
-  }, async (accessToken, refreshToken, profile, done) => {
+  }, async (accessToken: any, refreshToken: any, profile: any, done: any) => {
     try {
       console.log("Google OAuth callback - User authenticated", { userId: profile.id });
 

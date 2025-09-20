@@ -1,0 +1,52 @@
+I want to build a Roblox-related gambling website for "Grow a Garden" using a virtual currency called Sheckless (SX). The project should include the following features:
+
+1. **User System**
+   - Registration and login with authentication.
+   - On signup, give a 5 SX joining bonus.
+   - Track balances separately for earned SX vs joining bonus.
+
+2. **Gambling System**
+   - Include three games: coin flip, dice roll, and roulette.
+   - Implement fair RNG for all games.
+   - Update balances and track earnings properly.
+
+3. **Withdrawal System**
+   - Users can withdraw only if:
+     - Total balance ≥ 10 SX
+     - Earned SX ≥ 10 SX (joining bonus alone cannot be withdrawn)
+   - Display withdrawal eligibility on the dashboard.
+
+4. **User Dashboard**
+   - Show current balance, earned vs bonus SX.
+   - Show game history and withdrawal eligibility.
+   - Interface for playing games.
+
+5. **Discord Bot**
+   - Admin command: `!add @user <amount>` to add SX.
+   - User command: `!balance` to check balance.
+   - Notify admins of withdrawal requests.
+   - Secure commands so only authorized users can execute.
+
+6. **Real-Time Chat**
+   - Users can request withdrawals or communicate.
+   - Implement using WebSockets (Socket.IO) or Firebase.
+
+7. **Frontend**
+   - React + TailwindCSS for responsive UI.
+   - Dashboard, games, chat interface.
+
+8. **Backend**
+   - Node.js + Express.js API.
+   - PostgreSQL database storing users, balances, transactions, and chat messages.
+   - Secure API endpoints with input validation and authentication.
+
+Please generate the **full project structure** with:
+- React frontend components for dashboard, games, chat.
+- Express.js backend routes for authentication, gambling, withdrawals, and chat.
+- PostgreSQL database schema for users, balances, transactions, and chat.
+- Discord bot integration code.
+- Example fair RNG logic for each game.
+- Comments explaining all parts of the code.
+- Basic styling with TailwindCSS for usability.
+
+Make the project ready to run in Replit, including setup instructions and sample environment variables.

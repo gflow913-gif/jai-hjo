@@ -39,3 +39,19 @@ export function configureReplitSSL() {
     console.log('SSL configuration applied for Replit environment.');
   }
 }
+
+/**
+ * Create a secure HTTPS agent with proper SSL configuration for external API calls
+ */
+export function createSecureAgent() {
+  return new https.Agent({
+    // Use secure TLS version
+    secureProtocol: 'TLSv1_2_method',
+    // Keep connections alive for better performance
+    keepAlive: true,
+    // Handle certificate verification appropriately
+    rejectUnauthorized: process.env.NODE_ENV === 'production',
+    // Set reasonable timeout
+    timeout: 15000,
+  });
+}

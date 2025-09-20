@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { setupGoogleAuth, isAuthenticated } from "./googleAuth";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { gameService } from "./gameService";
 import { setupDiscordBot, getDiscordBot } from "./discordBot";
 import { insertChatMessageSchema, insertWithdrawalRequestSchema, users } from "@shared/schema";
@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
-  await setupGoogleAuth(app);
+  await setupAuth(app);
 
   // Setup Discord bot
   await setupDiscordBot();

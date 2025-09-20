@@ -25,8 +25,8 @@ export function configureReplitSSL() {
     });
 
     // Override the default certificate validation for known OAuth providers
-    const originalCreateConnection = https.globalAgent.createConnection;
-    https.globalAgent.createConnection = function(options: any, callback: any) {
+    const originalCreateConnection = (https.globalAgent as any).createConnection;
+    (https.globalAgent as any).createConnection = function(options: any, callback: any) {
       // For Google OAuth endpoints, handle certificate chain appropriately
       if (options.hostname?.includes('accounts.google.com') || 
           options.hostname?.includes('oauth2.googleapis.com')) {

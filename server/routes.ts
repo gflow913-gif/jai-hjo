@@ -2,7 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { auth } from "./betterAuth";
+import { toNodeHandler } from "better-auth/node";
+import { isAuthenticated } from "./authMiddleware";
 import { gameService } from "./gameService";
 import { setupDiscordBot, getDiscordBot } from "./discordBot";
 import { insertChatMessageSchema, insertWithdrawalRequestSchema, users } from "@shared/schema";
@@ -11,7 +13,7 @@ import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
-  await setupAuth(app);
+  app.all("/api/auth/*", toNodeHandler(auth));
 
   // Setup Discord bot
   await setupDiscordBot();

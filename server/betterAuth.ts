@@ -47,7 +47,6 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    generateId: false,
     crossSubDomainCookies: {
       enabled: true,
       domain: process.env.REPLIT_DEV_DOMAIN ? `.${process.env.REPLIT_DEV_DOMAIN}` : undefined,

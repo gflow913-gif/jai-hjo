@@ -1,15 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
+import { authClient } from "../lib/authClient";
 
 export function useAuth() {
-  const { data: user, isLoading, refetch } = useQuery({
-    queryKey: ["/api/auth/user"],
+  // Use react-query to fetch session data
+  const { data: session, isLoading, refetch } = useQuery({
+    queryKey: ["auth-session"],
+    queryFn: async () => {
+      try {
+        const result = await authClient.getSession();
+        return result;
+      } catch (error) {
+        console.error("Auth session error:", error);
+        return null;
+      }
+    },
     retry: false,
   });
 
   return {
-    user,
+    user: session?.data?.user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!session?.data?.user,
     refetch,
   };
 }

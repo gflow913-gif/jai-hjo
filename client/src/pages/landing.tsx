@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { authClient } from "../lib/authClient";
 
 export default function Landing() {
   return (
@@ -117,11 +118,16 @@ export default function Landing() {
             <Button 
               size="lg" 
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              onClick={() => window.location.href = '/api/login'}
+              onClick={async () => {
+                await authClient.signIn.social({
+                  provider: "google",
+                  callbackURL: "/", 
+                });
+              }}
               data-testid="button-login"
             >
-              <i className="fas fa-sign-in-alt mr-2"></i>
-              Login with Replit
+              <i className="fab fa-google mr-2"></i>
+              Sign in with Google
             </Button>
           </div>
         </div>

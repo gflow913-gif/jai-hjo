@@ -4,6 +4,27 @@ import { eq } from "drizzle-orm";
 import { users, withdrawalRequests } from "@shared/schema";
 import { db } from "./db";
 
+// Helper function to get the application URL for the current environment
+const getAppURL = () => {
+  // Check for custom base URL first
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL;
+  }
+  
+  // Replit environment detection
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  if (process.env.REPLIT_DOMAINS) {
+    return `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+  }
+  
+  // Standard development/production environments
+  return process.env.NODE_ENV === 'production' 
+    ? process.env.PRODUCTION_URL || 'https://your-domain.com' 
+    : 'http://localhost:5000';
+};
+
 class DiscordBot {
   private client: Client;
   private isReady = false;
@@ -453,7 +474,7 @@ class DiscordBot {
       const embed = {
         color: 0x3B82F6,
         title: '🔗 Link Your Account',
-        description: `To link your Discord account to Grow Casino:\n\n1. Log into the website: **https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'your-domain.replit.app'}**\n2. Go to your dashboard\n3. Enter this code: **${linkCode}**\n\n⏱️ This code expires in 10 minutes.`,
+        description: `To link your Discord account to Grow Casino:\n\n1. Log into the website: **${getAppURL()}**\n2. Go to your dashboard\n3. Enter this code: **${linkCode}**\n\n⏱️ This code expires in 10 minutes.`,
         footer: {
           text: 'Grow Casino • Account Linking',
         },

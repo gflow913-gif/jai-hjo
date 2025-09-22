@@ -14,16 +14,24 @@ if (process.env.NODE_ENV === 'development') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
-// Get the base URL for Replit environment
+// Get the base URL for the current environment
 const getBaseURL = () => {
+  // Check for custom base URL first
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL;
+  }
+  
+  // Replit environment detection
   if (process.env.REPLIT_DEV_DOMAIN) {
     return `https://${process.env.REPLIT_DEV_DOMAIN}`;
   }
   if (process.env.REPLIT_DOMAINS) {
     return `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
   }
+  
+  // Standard development/production environments
   return process.env.NODE_ENV === 'production' 
-    ? 'https://your-app.replit.app' 
+    ? process.env.PRODUCTION_URL || 'https://your-app.replit.app' 
     : 'http://localhost:5000';
 };
 
@@ -49,7 +57,8 @@ export const auth = betterAuth({
   advanced: {
     crossSubDomainCookies: {
       enabled: true,
-      domain: process.env.REPLIT_DEV_DOMAIN ? `.${process.env.REPLIT_DEV_DOMAIN}` : undefined,
+      domain: process.env.COOKIE_DOMAIN || 
+              (process.env.REPLIT_DEV_DOMAIN ? `.${process.env.REPLIT_DEV_DOMAIN}` : undefined),
     },
   },
   session: {

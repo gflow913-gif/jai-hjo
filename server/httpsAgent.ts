@@ -1,16 +1,21 @@
 import https from 'https';
 
 /**
- * Configure Node.js HTTPS settings for Replit environment
+ * Configure Node.js HTTPS settings for cloud environments
  * This handles SSL certificate chain issues in a secure way
  */
-export function configureReplitSSL() {
+export function configureSSL() {
   // Store original globalAgent
   const originalAgent = https.globalAgent;
   
-  // Set up Replit-compatible HTTPS configuration
-  if (process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS) {
-    console.log('Configuring SSL for Replit environment...');
+  // Set up HTTPS configuration for cloud environments (Replit, Heroku, etc.)
+  const isCloudEnvironment = process.env.REPLIT_DEV_DOMAIN || 
+                           process.env.REPLIT_DOMAINS || 
+                           process.env.HEROKU_APP_NAME ||
+                           process.env.NODE_ENV === 'production';
+  
+  if (isCloudEnvironment) {
+    console.log('Configuring SSL for cloud environment...');
     
     // Configure global HTTPS agent with proper settings
     https.globalAgent = new https.Agent({
@@ -18,25 +23,27 @@ export function configureReplitSSL() {
       secureProtocol: 'TLSv1_2_method',
       // Keep connections alive for better performance
       keepAlive: true,
-      // Handle certificate verification for Replit proxy
-      rejectUnauthorized: true, // Keep security enabled
+      // Handle certificate verification appropriately
+      rejectUnauthorized: process.env.NODE_ENV === 'production',
       // Set reasonable timeout
       timeout: 15000,
     });
 
-    // Override the default certificate validation for known OAuth providers
-    const originalCreateConnection = (https.globalAgent as any).createConnection;
-    (https.globalAgent as any).createConnection = function(options: any, callback: any) {
-      // For Google OAuth endpoints, handle certificate chain appropriately
-      if (options.hostname?.includes('accounts.google.com') || 
-          options.hostname?.includes('oauth2.googleapis.com')) {
-        // Use more lenient validation for OAuth endpoints in Replit
-        options.rejectUnauthorized = false;
-      }
-      return originalCreateConnection.call(this, options, callback);
-    };
+    // Override the default certificate validation for known OAuth providers in development
+    if (process.env.NODE_ENV !== 'production') {
+      const originalCreateConnection = (https.globalAgent as any).createConnection;
+      (https.globalAgent as any).createConnection = function(options: any, callback: any) {
+        // For Google OAuth endpoints, handle certificate chain appropriately
+        if (options.hostname?.includes('accounts.google.com') || 
+            options.hostname?.includes('oauth2.googleapis.com')) {
+          // Use more lenient validation for OAuth endpoints in development
+          options.rejectUnauthorized = false;
+        }
+        return originalCreateConnection.call(this, options, callback);
+      };
+    }
     
-    console.log('SSL configuration applied for Replit environment.');
+    console.log('SSL configuration applied for cloud environment.');
   }
 }
 

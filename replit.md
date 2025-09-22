@@ -70,7 +70,16 @@ Preferred communication style: Simple, everyday language.
 - **connect-pg-simple**: PostgreSQL session store for persistent authentication
 
 ## Development & Build Tools
-- **vite**: Fast build tool and development server
+- **vite**: Fast build tool and development server (configured for both Replit and VS Code environments)
 - **typescript**: Type safety and enhanced developer experience
 - **tsx**: TypeScript execution engine for development
 - **esbuild**: Fast JavaScript bundler for production builds
+- **cross-env**: Cross-platform environment variable setting for Windows/macOS/Linux compatibility
+
+## VS Code Compatibility
+The project has been configured to work seamlessly in VS Code with:
+- **Workspace Configuration**: VS Code settings, launch configurations, tasks, and recommended extensions
+- **Cross-platform Scripts**: Uses cross-env for environment variable compatibility across operating systems
+- **Flexible Environment Handling**: Supports both Replit-specific variables and standard development environments
+- **Integrated Debugging**: Full-stack debugging support with VS Code's integrated terminal and debugger
+- **Optional Replit Plugins**: Replit-specific Vite plugins load conditionally to prevent errors in other environments

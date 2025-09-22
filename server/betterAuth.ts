@@ -47,12 +47,8 @@ export const auth = betterAuth({
     },
   }),
   socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      scope: ["email", "profile"],
-      redirectURI: `${getBaseURL()}/api/auth/callback/google`,
-    },
+    // Auth0 handles Google authentication, so we don't need direct Google OAuth here
+    // Auth0 will be configured separately via Auth0 Universal Login
   },
   advanced: {
     crossSubDomainCookies: {
